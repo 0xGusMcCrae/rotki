@@ -5,6 +5,7 @@ from eth_typing import BlockNumber
 
 from rotkehlchen.chain.constants import DEFAULT_EVM_RPC_TIMEOUT
 from rotkehlchen.chain.evm.contracts import EvmContracts
+from rotkehlchen.chain.evm.node_inquirer import UpdatableCacheDataMixin
 from rotkehlchen.chain.evm.types import string_to_evm_address
 from rotkehlchen.chain.optimism_superchain.node_inquirer import OptimismSuperchainInquirer
 from rotkehlchen.constants.assets import A_ETH
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 log = RotkehlchenLogsAdapter(logger)
 
 
-class BaseInquirer(OptimismSuperchainInquirer):
+class BaseInquirer(OptimismSuperchainInquirer, UpdatableCacheDataMixin):
 
     def __init__(
             self,
@@ -43,6 +44,7 @@ class BaseInquirer(OptimismSuperchainInquirer):
             msg_aggregator=database.msg_aggregator,
         )
         contracts = EvmContracts[Literal[ChainID.BASE]](chain_id=ChainID.BASE)
+        UpdatableCacheDataMixin.__init__(self, database)
         super().__init__(
             greenlet_manager=greenlet_manager,
             database=database,

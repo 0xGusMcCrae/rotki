@@ -70,6 +70,10 @@ from rotkehlchen.balances.manual import (
     remove_manually_tracked_balances,
 )
 from rotkehlchen.chain.accounts import SingleBlockchainAccountData
+from rotkehlchen.chain.base.modules.aerodrome.aerodrome_cache import (
+    query_aerodrome_data,
+    save_aerodrome_data_to_cache,
+)
 from rotkehlchen.chain.bitcoin.xpub import XpubManager
 from rotkehlchen.chain.ethereum.airdrops import AIRDROPS, check_airdrops
 from rotkehlchen.chain.ethereum.defi.protocols import DEFI_PROTOCOLS
@@ -4290,6 +4294,18 @@ class RestAPI:
         if velodrome_success is False:
             return wrap_in_fail_result(
                 message='Failed to refresh velodrome pools cache',
+                status_code=HTTPStatus.CONFLICT,
+            )
+        base_inquirer = self.rotkehlchen.chains_aggregator.base.node_inquirer
+        aerodrome_success = base_inquirer.ensure_cache_data_is_updated(
+            cache_type=CacheType.AERODROME_POOL_ADDRESS,
+            query_method=query_aerodrome_data,
+            save_method=save_aerodrome_data_to_cache,
+            force_refresh=True,
+        )
+        if aerodrome_success is False:
+            return wrap_in_fail_result(
+                message='Failed to refresh aerodrome pools cache',
                 status_code=HTTPStatus.CONFLICT,
             )
         try:

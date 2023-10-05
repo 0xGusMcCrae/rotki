@@ -18,6 +18,8 @@ from rotkehlchen.utils.misc import hex_or_bytes_to_address, hex_or_bytes_to_int
 
 if TYPE_CHECKING:
     from rotkehlchen.accounting.structures.evm_event import EvmEvent
+    from rotkehlchen.chain.base.modules.aerodrome.aerodrome_cache import AerodromePoolData
+    from rotkehlchen.chain.base.node_inquirer import BaseInquirer
     from rotkehlchen.chain.ethereum.modules.curve.curve_cache import (
         READ_CURVE_DATA_TYPE,
         CurvePoolData,
@@ -204,10 +206,12 @@ class ReloadablePoolsAndGaugesDecoderMixin(ReloadableDecoderMixin, metaclass=ABC
             evm_inquirer: 'EvmNodeInquirer',
             cache_type_to_check_for_freshness: CacheType,
             query_data_method: Union[
+                Callable[['BaseInquirer'], Optional[list['AerodromePoolData']]],
                 Callable[['OptimismInquirer'], Optional[list['VelodromePoolData']]],
                 Callable[['EthereumInquirer'], Optional[list['CurvePoolData']]],
             ],
             save_data_to_cache_method: Union[
+                Callable[['DBCursor', 'DBHandler', list['AerodromePoolData']], None],
                 Callable[['DBCursor', 'DBHandler', list['CurvePoolData']], None],
                 Callable[['DBCursor', 'DBHandler', list['VelodromePoolData']], None],
             ],

@@ -24,6 +24,7 @@ from rotkehlchen.logging import RotkehlchenLogsAdapter
 from rotkehlchen.types import ChainID, ChecksumEvmAddress
 
 if TYPE_CHECKING:
+    from rotkehlchen.chain.base.types import BASE_KNOWN_ABI
     from rotkehlchen.chain.ethereum.types import ETHEREUM_KNOWN_ABI
     from rotkehlchen.chain.evm.node_inquirer import EvmNodeInquirer
     from rotkehlchen.chain.evm.structures import EvmTxReceiptLog
@@ -273,7 +274,7 @@ class EvmContracts(Generic[T]):
         ...
 
     @overload
-    def abi(self: 'EvmContracts[Literal[ChainID.BASE]]', name: Literal['']) -> list[dict[str, Any]]:  # noqa: E501
+    def abi(self: 'EvmContracts[Literal[ChainID.BASE]]', name: 'BASE_KNOWN_ABI') -> list[dict[str, Any]]:  # noqa: E501
         ...
 
     @overload

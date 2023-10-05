@@ -8,6 +8,11 @@ import requests
 from freezegun import freeze_time
 
 from rotkehlchen.assets.resolver import AssetResolver
+from rotkehlchen.chain.base.modules.aerodrome.aerodrome_cache import (
+    query_aerodrome_data,
+    read_aerodrome_pools_and_gauges_from_cache,
+    save_aerodrome_data_to_cache,
+)
 from rotkehlchen.chain.ethereum.modules.curve.curve_cache import CURVE_API_URLS
 from rotkehlchen.chain.evm.types import string_to_evm_address
 from rotkehlchen.chain.optimism.modules.velodrome.velodrome_cache import (
@@ -148,6 +153,28 @@ VELODROME_SOME_EXPECTED_ADDRESBOOK_ENTRIES = [
     ),
 ]
 
+AERODROME_SOME_EXPECTED_POOLS = {
+    string_to_evm_address('0xB4885Bc63399BF5518b994c1d0C153334Ee579D0'),
+}
+
+AERODROME_SOME_EXPECTED_GAUGES = {
+    string_to_evm_address('0xeca7Ff920E7162334634c721133F3183B83B0323'),
+}
+
+AERODROME_SOME_EXPECTED_ASSETS = [
+    'eip155:8453/erc20:0x940181a94A35A4569E4529A3CDfB74e38FD98631',
+    'eip155:8453/erc20:0x4200000000000000000000000000000000000006',
+    'eip155:8453/erc20:0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA',
+]
+
+AERODROME_SOME_EXPECTED_ADDRESSBOOK_ENTRIES = [
+    AddressbookEntry(
+        address=string_to_evm_address('0xB4885Bc63399BF5518b994c1d0C153334Ee579D0'),
+        name='Aerodrome pool vAMM-WETH/USDbC',
+        blockchain=SupportedBlockchain.BASE,
+    ),
+]
+
 
 @pytest.mark.vcr(filter_query_parameters=['apikey'])
 def test_velodrome_cache(optimism_inquirer):
@@ -177,6 +204,34 @@ def test_velodrome_cache(optimism_inquirer):
     assert all(entry in addressbook_entries for entry in VELODROME_SOME_EXPECTED_ADDRESBOOK_ENTRIES)  # noqa: E501
     assert all((identifier,) in asset_identifiers for identifier in VELODROME_SOME_EXPECTED_ASSETS)
 
+
+@pytest.mark.vcr(filter_query_parameters=['apikey'])
+def test_aerodrome_cache(base_inquirer):
+    with GlobalDBHandler().conn.write_ctx() as write_cursor:
+        # Make sure that no aerodrome related data is stored in the database.
+        write_cursor.execute('DELETE FROM general_cache WHERE key LIKE "%AERO%"')
+        write_cursor.execute('DELETE FROM unique_cache WHERE key LIKE "%AERO%"')
+        write_cursor.execute('DELETE FROM address_book')
+        write_cursor.execute('DELETE FROM assets')
+
+    base_inquirer.ensure_cache_data_is_updated(
+        cache_type=CacheType.AERODROME_POOL_ADDRESS,
+        query_method=query_aerodrome_data,
+        save_method=save_aerodrome_data_to_cache,
+    )  # populates cache, addressbook and assets tables
+    pools, gauges = read_aerodrome_pools_and_gauges_from_cache()
+    assert pools >= AERODROME_SOME_EXPECTED_POOLS
+    assert gauges >= AERODROME_SOME_EXPECTED_GAUGES
+
+    with GlobalDBHandler().conn.read_ctx() as cursor:
+        addressbook_entries = DBAddressbook(base_inquirer.database).get_addressbook_entries(
+            cursor=cursor,
+            filter_query=AddressbookFilterQuery.make(),
+        )[0]
+        asset_identifiers = cursor.execute('SELECT identifier FROM assets').fetchall()
+
+    assert all(entry in addressbook_entries for entry in AERODROME_SOME_EXPECTED_ADDRESSBOOK_ENTRIES)  # noqa: E501
+    assert all((identifier,) in asset_identifiers for identifier in AERODROME_SOME_EXPECTED_ASSETS)
 
 @pytest.mark.vcr(filter_query_parameters=['apikey'])
 @pytest.mark.parametrize('have_decoders', [True])
